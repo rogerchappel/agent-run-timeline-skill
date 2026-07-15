@@ -1,0 +1,51 @@
+{
+  "title": "Release candidate build",
+  "events": [
+    {
+      "id": "evt-1",
+      "timestamp": "2026-07-15T01:00:00Z",
+      "phase": "intake",
+      "summary": "Read PRD and selected candidate",
+      "evidence": [
+        "docs/PRD.md"
+      ]
+    },
+    {
+      "id": "evt-2",
+      "timestamp": "2026-07-15T01:08:00Z",
+      "phase": "planning",
+      "summary": "Outlined file groups and verification checks",
+      "evidence": [
+        "docs/TASKS.md"
+      ]
+    },
+    {
+      "id": "evt-3",
+      "timestamp": "2026-07-15T01:40:00Z",
+      "phase": "change",
+      "summary": "Implemented CLI and fixtures",
+      "evidence": [
+        "src/index.js"
+      ]
+    },
+    {
+      "id": "evt-4",
+      "timestamp": "2026-07-15T02:30:00Z",
+      "phase": "verification",
+      "summary": "Ran test, check, and smoke commands",
+      "evidence": [
+        "npm test",
+        "npm run smoke"
+      ]
+    },
+    {
+      "id": "evt-5",
+      "timestamp": "2026-07-15T02:36:00Z",
+      "phase": "reporting",
+      "summary": "Prepared release-candidate notes",
+      "followups": [
+        "Review PR body before merge"
+      ]
+    }
+  ]
+}

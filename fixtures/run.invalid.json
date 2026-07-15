@@ -1,0 +1,11 @@
+{
+  "title": "Broken run",
+  "events": [
+    {
+      "id": "bad",
+      "timestamp": "not-a-date",
+      "phase": "mystery",
+      "summary": "token=sk-examplebadsecret12345"
+    }
+  ]
+}
