@@ -1,0 +1,34 @@
+{
+  "name": "agent-run-timeline-skill",
+  "version": "0.1.0",
+  "description": "Local-first skill for converting agent run events into audit timelines with gap detection.",
+  "type": "module",
+  "bin": {
+    "agent-run-timeline": "./bin/agent-run-timeline.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check bin/agent-run-timeline.js && node --check src/index.js",
+    "smoke": "node bin/agent-run-timeline.js render fixtures/run.valid.json --format markdown"
+  },
+  "keywords": [
+    "agent",
+    "skill",
+    "timeline",
+    "dry-run",
+    "audit"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src",
+    "docs",
+    "fixtures",
+    "SKILL.md",
+    "README.md",
+    "LICENSE"
+  ]
+}
