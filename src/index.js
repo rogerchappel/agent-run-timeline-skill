@@ -49,9 +49,10 @@ export function buildTimeline(input, options = {}) {
       if (minutes >= idleMinutes) gaps.push({ after: events[index - 1].id, before: events[index].id, minutes });
     }
   }
-  const phases = Object.fromEntries(PHASES.map((phase) => [phase, events.filter((event) => event.phase === phase)]));
-  const followups = events.flatMap((event) => (event.followups || []).map((task) => ({ event: event.id, task })));
-  return { title: input.title || "Agent run", validation, phases, events, gaps, followups };
+  const safeEvents = redactSecretLikeValues(events);
+  const phases = Object.fromEntries(PHASES.map((phase) => [phase, safeEvents.filter((event) => event.phase === phase)]));
+  const followups = safeEvents.flatMap((event) => (event.followups || []).map((task) => ({ event: event.id, task })));
+  return { title: redactSecretLikeValues(input.title || "Agent run"), validation, phases, events: safeEvents, gaps: redactSecretLikeValues(gaps), followups };
 }
 
 export function renderMarkdown(input, options = {}) {
@@ -94,6 +95,17 @@ function findSecretLikeValues(value, path = "$") {
   if (Array.isArray(value)) value.forEach((entry, index) => findings.push(...findSecretLikeValues(entry, `${path}[${index}]`)));
   else if (value && typeof value === "object") for (const [key, entry] of Object.entries(value)) findings.push(...findSecretLikeValues(entry, `${path}.${key}`));
   return findings;
+}
+
+function redactSecretLikeValues(value) {
+  if (typeof value === "string") {
+    return SECRET_PATTERNS.reduce((safe, pattern) => safe.replace(new RegExp(pattern.source, `${pattern.flags}g`), "[REDACTED]"), value);
+  }
+  if (Array.isArray(value)) return value.map(redactSecretLikeValues);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, redactSecretLikeValues(entry)]));
+  }
+  return value;
 }
 
 function capitalize(value) {
