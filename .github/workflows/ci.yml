@@ -17,6 +17,4 @@ jobs:
         with:
           node-version: 20
       - run: npm install --package-lock=false
-      - run: npm run check
-      - run: npm test
-      - run: npm run smoke
+      - run: npm run validate

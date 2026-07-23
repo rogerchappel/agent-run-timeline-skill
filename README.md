@@ -21,10 +21,18 @@ node bin/agent-run-timeline.js render fixtures/run.valid.json --format json
 ## Library API
 
 ```js
-import { renderMarkdown } from "agent-run-timeline-skill";
+import {
+  buildTimeline,
+  readRun,
+  renderMarkdown,
+  validateRun,
+} from "agent-run-timeline-skill";
 
 const markdown = renderMarkdown(input);
 ```
+
+The package exports `readRun`, `validateRun`, `buildTimeline`, and
+`renderMarkdown` from its root entry point.
 
 ## Limitations
 

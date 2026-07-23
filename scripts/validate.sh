@@ -3,3 +3,4 @@ set -euo pipefail
 npm run check
 npm test
 npm run smoke
+npm run smoke:package

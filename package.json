@@ -3,13 +3,18 @@
   "version": "0.1.0",
   "description": "Local-first skill for converting agent run events into audit timelines with gap detection.",
   "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "bin": {
     "agent-run-timeline": "./bin/agent-run-timeline.js"
   },
   "scripts": {
     "test": "node --test",
     "check": "node --check bin/agent-run-timeline.js && node --check src/index.js",
-    "smoke": "node bin/agent-run-timeline.js render fixtures/run.valid.json --format markdown"
+    "smoke": "node bin/agent-run-timeline.js render fixtures/run.valid.json --format markdown",
+    "smoke:package": "node scripts/package-smoke.js",
+    "validate": "bash scripts/validate.sh"
   },
   "keywords": [
     "agent",
