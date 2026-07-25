@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { buildTimeline, renderMarkdown, validateRun } from "../src/index.js";
@@ -17,6 +17,35 @@ test("invalid fixture reports actionable findings", () => {
   const result = validateRun(invalid);
   assert.equal(result.ok, false);
   assert.match([...result.errors, ...result.warnings].join("\n"), /Secret-looking|missing|required|invalid/i);
+});
+
+test("validation handles every JSON root without throwing", () => {
+  for (const [input, message] of [
+    [null, "run must be a JSON object."],
+    [[], "run must be a JSON object."],
+    ["run", "run must be a JSON object."],
+    [42, "run must be a JSON object."]
+  ]) {
+    assert.deepEqual(validateRun(input), { ok: false, errors: [message], warnings: [] });
+    assert.equal(buildTimeline(input).validation.errors[0], message);
+  }
+});
+
+test("validation reports malformed events and collection fields", () => {
+  const input = {
+    events: [
+      null,
+      { id: "two", timestamp: "2026-07-22T00:00:00Z", phase: "change", summary: "Changed", evidence: "log", followups: "task" }
+    ]
+  };
+  const result = validateRun(input);
+  assert.deepEqual(result.errors, [
+    "event 1 must be an object.",
+    "event 2 evidence must be an array.",
+    "event 2 followups must be an array."
+  ]);
+  assert.doesNotThrow(() => renderMarkdown(input));
+  assert.doesNotThrow(() => buildTimeline(input));
 });
 
 test("markdown render includes timeline sections", () => {
@@ -78,4 +107,33 @@ test("CLI validate exits successfully for valid fixture", () => {
     encoding: "utf8"
   });
   assert.match(output, /"ok": true/);
+});
+
+test("stdin CLI commands fail consistently with actionable findings for invalid shapes", () => {
+  const inputs = [
+    [null, "run must be a JSON object."],
+    [[], "run must be a JSON object."],
+    [{ events: [null] }, "event 1 must be an object."],
+    [{
+      events: [{ id: "one", timestamp: "2026-07-22T00:00:00Z", phase: "change", summary: "Changed", evidence: {}, followups: "task" }]
+    }, "event 1 evidence must be an array."]
+  ];
+
+  for (const [input, finding] of inputs) {
+    for (const args of [
+      ["validate", "-"],
+      ["render", "-", "--format", "markdown"],
+      ["render", "-", "--format", "json"]
+    ]) {
+      const result = spawnSync("node", ["bin/agent-run-timeline.js", ...args], {
+        cwd: new URL("..", import.meta.url),
+        encoding: "utf8",
+        input: JSON.stringify(input)
+      });
+      assert.equal(result.status, 1, `${args.join(" ")} should reject ${JSON.stringify(input)}`);
+      assert.equal(result.stderr, "");
+      assert.match(result.stdout, new RegExp(finding.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      assert.doesNotMatch(result.stdout, /TypeError|Cannot read properties/);
+    }
+  }
 });

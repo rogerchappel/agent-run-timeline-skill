@@ -18,19 +18,30 @@ export function readRun(filePath) {
 export function validateRun(input) {
   const errors = [];
   const warnings = [];
+  if (!isPlainObject(input)) {
+    errors.push("run must be a JSON object.");
+    return { ok: false, errors, warnings };
+  }
   if (!Array.isArray(input.events) || input.events.length === 0) {
     errors.push("events must contain at least one run event.");
     return { ok: false, errors, warnings };
   }
   for (const [index, event] of input.events.entries()) {
+    if (!isPlainObject(event)) {
+      errors.push(`event ${index + 1} must be an object.`);
+      continue;
+    }
     for (const field of REQUIRED_FIELDS) {
       if (!isNonEmptyString(event[field])) errors.push(`event ${index + 1} missing required field: ${field}`);
+    }
+    for (const field of ["evidence", "followups"]) {
+      if (event[field] !== undefined && !Array.isArray(event[field])) errors.push(`event ${index + 1} ${field} must be an array.`);
     }
     if (event.phase && !PHASES.includes(event.phase)) warnings.push(`event ${event.id || index + 1} uses unknown phase: ${event.phase}`);
     if (event.timestamp && Number.isNaN(Date.parse(event.timestamp))) errors.push(`event ${event.id || index + 1} has invalid timestamp.`);
     for (const finding of findSecretLikeValues(event)) warnings.push(`Secret-looking value at events[${index}]${finding.path.slice(1)}`);
   }
-  const ordered = [...input.events].filter((event) => event.timestamp).sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+  const ordered = input.events.filter(isPlainObject).filter((event) => event.timestamp).sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
   if (!ordered.some((event) => event.phase === "verification")) warnings.push("No verification phase event recorded.");
   if (!ordered.some((event) => event.phase === "reporting")) warnings.push("No reporting phase event recorded.");
   return { ok: errors.length === 0, errors, warnings };
@@ -39,7 +50,10 @@ export function validateRun(input) {
 export function buildTimeline(input, options = {}) {
   const idleMinutes = Number(options.idleMinutes || 30);
   const validation = validateRun(input);
-  const events = [...(input.events || [])].sort((a, b) => Date.parse(a.timestamp || 0) - Date.parse(b.timestamp || 0));
+  const run = isPlainObject(input) ? input : {};
+  const events = (Array.isArray(run.events) ? run.events : [])
+    .filter(isPlainObject)
+    .sort((a, b) => Date.parse(a.timestamp || 0) - Date.parse(b.timestamp || 0));
   const gaps = [];
   for (let index = 1; index < events.length; index += 1) {
     const previous = Date.parse(events[index - 1].timestamp);
@@ -51,8 +65,8 @@ export function buildTimeline(input, options = {}) {
   }
   const safeEvents = redactSecretLikeValues(events);
   const phases = Object.fromEntries(PHASES.map((phase) => [phase, safeEvents.filter((event) => event.phase === phase)]));
-  const followups = safeEvents.flatMap((event) => (event.followups || []).map((task) => ({ event: event.id, task })));
-  return { title: redactSecretLikeValues(input.title || "Agent run"), validation, phases, events: safeEvents, gaps: redactSecretLikeValues(gaps), followups };
+  const followups = safeEvents.flatMap((event) => (Array.isArray(event.followups) ? event.followups : []).map((task) => ({ event: event.id, task })));
+  return { title: redactSecretLikeValues(run.title || "Agent run"), validation, phases, events: safeEvents, gaps: redactSecretLikeValues(gaps), followups };
 }
 
 export function renderMarkdown(input, options = {}) {
@@ -64,7 +78,7 @@ export function renderMarkdown(input, options = {}) {
     if (events.length === 0) lines.push("- none recorded");
     for (const event of events) {
       lines.push(`- ${event.timestamp || "unknown time"} [${event.id || "missing id"}] ${event.summary || "missing summary"}`);
-      for (const ref of event.evidence || []) lines.push(`  - evidence: ${ref}`);
+      for (const ref of Array.isArray(event.evidence) ? event.evidence : []) lines.push(`  - evidence: ${ref}`);
     }
     lines.push("");
   }
@@ -114,4 +128,8 @@ function capitalize(value) {
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
