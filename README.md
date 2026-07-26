@@ -38,7 +38,10 @@ The package exports `readRun`, `validateRun`, `buildTimeline`, and
 
 Input must be a JSON object with a non-empty `events` array. Each event must be
 an object containing non-empty string `id`, `timestamp`, `phase`, and `summary`
-fields. Optional `evidence` and `followups` fields must be arrays when present.
+fields. `phase` must be one of `intake`, `planning`, `change`, `verification`,
+or `reporting`; unknown phases are validation errors so they cannot silently
+disappear from the grouped Markdown timeline. Optional `evidence` and
+`followups` fields must be arrays when present.
 
 `validateRun` accepts any JSON value and returns
 `{ ok, errors, warnings }`; malformed input is reported through deterministic

@@ -37,7 +37,7 @@ export function validateRun(input) {
     for (const field of ["evidence", "followups"]) {
       if (event[field] !== undefined && !Array.isArray(event[field])) errors.push(`event ${index + 1} ${field} must be an array.`);
     }
-    if (event.phase && !PHASES.includes(event.phase)) warnings.push(`event ${event.id || index + 1} uses unknown phase: ${event.phase}`);
+    if (event.phase && !PHASES.includes(event.phase)) errors.push(`event ${event.id || index + 1} uses unknown phase: ${event.phase}`);
     if (event.timestamp && Number.isNaN(Date.parse(event.timestamp))) errors.push(`event ${event.id || index + 1} has invalid timestamp.`);
     for (const finding of findSecretLikeValues(event)) warnings.push(`Secret-looking value at events[${index}]${finding.path.slice(1)}`);
   }
