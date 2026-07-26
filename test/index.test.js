@@ -60,6 +60,30 @@ test("normalizer exposes validation and structured output", () => {
   assert.ok(Object.keys(output).length > 2);
 });
 
+test("unknown phases are validation errors in library artifacts", () => {
+  const input = {
+    events: [{
+      id: "custom-phase",
+      timestamp: "2026-07-22T00:00:00Z",
+      phase: "analysis",
+      summary: "Used an unsupported phase",
+      evidence: ["run.log#L1"]
+    }]
+  };
+
+  const finding = "event custom-phase uses unknown phase: analysis";
+  assert.deepEqual(validateRun(input).errors, [finding]);
+
+  const timeline = buildTimeline(input);
+  assert.equal(timeline.validation.ok, false);
+  assert.deepEqual(timeline.validation.errors, [finding]);
+  assert.equal(timeline.events.length, 1);
+
+  const markdown = renderMarkdown(input);
+  assert.match(markdown, /Validation: fail/);
+  assert.match(markdown, new RegExp(finding));
+});
+
 test("render formats redact secret-like values while retaining validation warnings", () => {
   const secrets = ["token=supersecretvalue123", "ghp_abcdefghijklmnopqrstuvwxyz1234567890", "password=hunter123456"];
   const input = {
@@ -107,6 +131,32 @@ test("CLI validate exits successfully for valid fixture", () => {
     encoding: "utf8"
   });
   assert.match(output, /"ok": true/);
+});
+
+test("stdin CLI commands reject unknown phases consistently", () => {
+  const input = JSON.stringify({
+    events: [{
+      id: "custom-phase",
+      timestamp: "2026-07-22T00:00:00Z",
+      phase: "analysis",
+      summary: "Used an unsupported phase"
+    }]
+  });
+
+  for (const args of [
+    ["validate", "-"],
+    ["render", "-", "--format", "markdown"],
+    ["render", "-", "--format", "json"]
+  ]) {
+    const result = spawnSync("node", ["bin/agent-run-timeline.js", ...args], {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8",
+      input
+    });
+    assert.equal(result.status, 1, `${args.join(" ")} should reject an unknown phase`);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /event custom-phase uses unknown phase: analysis/);
+  }
 });
 
 test("stdin CLI commands fail consistently with actionable findings for invalid shapes", () => {
