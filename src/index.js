@@ -35,7 +35,13 @@ export function validateRun(input) {
       if (!isNonEmptyString(event[field])) errors.push(`event ${index + 1} missing required field: ${field}`);
     }
     for (const field of ["evidence", "followups"]) {
-      if (event[field] !== undefined && !Array.isArray(event[field])) errors.push(`event ${index + 1} ${field} must be an array.`);
+      if (event[field] !== undefined && !Array.isArray(event[field])) {
+        errors.push(`event ${index + 1} ${field} must be an array.`);
+      } else if (Array.isArray(event[field])) {
+        for (const [memberIndex, member] of event[field].entries()) {
+          if (!isNonEmptyString(member)) errors.push(`event ${index + 1} ${field}[${memberIndex}] must be a non-empty string.`);
+        }
+      }
     }
     if (event.phase && !PHASES.includes(event.phase)) errors.push(`event ${event.id || index + 1} uses unknown phase: ${event.phase}`);
     if (event.timestamp && Number.isNaN(Date.parse(event.timestamp))) errors.push(`event ${event.id || index + 1} has invalid timestamp.`);
@@ -65,7 +71,11 @@ export function buildTimeline(input, options = {}) {
   }
   const safeEvents = redactSecretLikeValues(events);
   const phases = Object.fromEntries(PHASES.map((phase) => [phase, safeEvents.filter((event) => event.phase === phase)]));
-  const followups = safeEvents.flatMap((event) => (Array.isArray(event.followups) ? event.followups : []).map((task) => ({ event: event.id, task })));
+  const followups = safeEvents.flatMap((event) =>
+    (Array.isArray(event.followups) ? event.followups : [])
+      .filter(isNonEmptyString)
+      .map((task) => ({ event: event.id, task }))
+  );
   return { title: redactSecretLikeValues(run.title || "Agent run"), validation, phases, events: safeEvents, gaps: redactSecretLikeValues(gaps), followups };
 }
 
@@ -78,7 +88,7 @@ export function renderMarkdown(input, options = {}) {
     if (events.length === 0) lines.push("- none recorded");
     for (const event of events) {
       lines.push(`- ${event.timestamp || "unknown time"} [${event.id || "missing id"}] ${event.summary || "missing summary"}`);
-      for (const ref of Array.isArray(event.evidence) ? event.evidence : []) lines.push(`  - evidence: ${ref}`);
+      for (const ref of Array.isArray(event.evidence) ? event.evidence.filter(isNonEmptyString) : []) lines.push(`  - evidence: ${ref}`);
     }
     lines.push("");
   }
