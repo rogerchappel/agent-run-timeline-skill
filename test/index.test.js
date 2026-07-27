@@ -48,6 +48,26 @@ test("validation reports malformed events and collection fields", () => {
   assert.doesNotThrow(() => buildTimeline(input));
 });
 
+test("validation reports malformed evidence and follow-up members by index", () => {
+  const input = {
+    events: [{
+      id: "one",
+      timestamp: "2026-07-22T00:00:00Z",
+      phase: "change",
+      summary: "Changed",
+      evidence: [{ path: "run.log" }, "", "run.log#L1"],
+      followups: [42, "Review the run"]
+    }]
+  };
+
+  assert.deepEqual(validateRun(input).errors, [
+    "event 1 evidence[0] must be a non-empty string.",
+    "event 1 evidence[1] must be a non-empty string.",
+    "event 1 followups[0] must be a non-empty string."
+  ]);
+  assert.doesNotMatch(renderMarkdown(input), /\[object Object\]/);
+});
+
 test("markdown render includes timeline sections", () => {
   const rendered = renderMarkdown(valid);
   assert.match(rendered, /# /);
@@ -185,5 +205,36 @@ test("stdin CLI commands fail consistently with actionable findings for invalid 
       assert.match(result.stdout, new RegExp(finding.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
       assert.doesNotMatch(result.stdout, /TypeError|Cannot read properties/);
     }
+  }
+});
+
+test("stdin CLI commands reject malformed collection members without unsafe coercion", () => {
+  const input = JSON.stringify({
+    events: [{
+      id: "one",
+      timestamp: "2026-07-22T00:00:00Z",
+      phase: "change",
+      summary: "Changed",
+      evidence: [{ path: "run.log" }, "run.log#L1"],
+      followups: ["", 42, "Review the run"]
+    }]
+  });
+
+  for (const args of [
+    ["validate", "-"],
+    ["render", "-", "--format", "markdown"],
+    ["render", "-", "--format", "json"]
+  ]) {
+    const result = spawnSync("node", ["bin/agent-run-timeline.js", ...args], {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8",
+      input
+    });
+    assert.equal(result.status, 1, `${args.join(" ")} should reject malformed members`);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /event 1 evidence\[0\] must be a non-empty string\./);
+    assert.match(result.stdout, /event 1 followups\[0\] must be a non-empty string\./);
+    assert.match(result.stdout, /event 1 followups\[1\] must be a non-empty string\./);
+    assert.doesNotMatch(result.stdout, /\[object Object\]|TypeError|Cannot read properties/);
   }
 });
