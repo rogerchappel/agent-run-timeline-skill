@@ -41,7 +41,11 @@ an object containing non-empty string `id`, `timestamp`, `phase`, and `summary`
 fields. `phase` must be one of `intake`, `planning`, `change`, `verification`,
 or `reporting`; unknown phases are validation errors so they cannot silently
 disappear from the grouped Markdown timeline. Optional `evidence` and
-`followups` fields must be arrays when present.
+`followups` fields must be arrays when present, and every array member must be
+a non-empty string. Findings identify malformed members by their event and
+zero-based array index (for example,
+`event 1 evidence[0] must be a non-empty string.`). Rendered follow-ups and
+evidence omit invalid members instead of coercing them into misleading text.
 
 `validateRun` accepts any JSON value and returns
 `{ ok, errors, warnings }`; malformed input is reported through deterministic
