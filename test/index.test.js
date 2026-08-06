@@ -6,6 +6,13 @@ import { buildTimeline, renderMarkdown, validateRun } from "../src/index.js";
 
 const valid = JSON.parse(readFileSync(new URL("../fixtures/run.valid.json", import.meta.url), "utf8"));
 const invalid = JSON.parse(readFileSync(new URL("../fixtures/run.invalid.json", import.meta.url), "utf8"));
+const duplicateIds = {
+  title: "Duplicate event ids",
+  events: [
+    { id: "same", timestamp: "2026-07-01T10:00:00Z", phase: "verification", summary: "Verify", followups: ["review"] },
+    { id: "same", timestamp: "2026-07-01T11:00:00Z", phase: "reporting", summary: "Report" }
+  ]
+};
 
 test("valid fixture passes validation", () => {
   const result = validateRun(valid);
@@ -78,6 +85,17 @@ test("normalizer exposes validation and structured output", () => {
   const output = buildTimeline(valid);
   assert.equal(output.validation.ok, true);
   assert.ok(Object.keys(output).length > 2);
+});
+
+test("duplicate non-empty event ids report deterministic indexed findings", () => {
+  const result = validateRun(duplicateIds);
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.errors, ["events[1].id duplicates events[0].id: same"]);
+
+  const output = buildTimeline(duplicateIds);
+  assert.deepEqual(output.gaps, [{ after: "same", before: "same", minutes: 60 }]);
+  assert.deepEqual(output.followups, [{ event: "same", task: "review" }]);
+  assert.equal(output.validation.ok, false);
 });
 
 test("unknown phases are validation errors in library artifacts", () => {
@@ -176,6 +194,33 @@ test("stdin CLI commands reject unknown phases consistently", () => {
     assert.equal(result.status, 1, `${args.join(" ")} should reject an unknown phase`);
     assert.equal(result.stderr, "");
     assert.match(result.stdout, /event custom-phase uses unknown phase: analysis/);
+  }
+});
+
+test("stdin CLI commands reject duplicate ids while retaining render diagnostics", () => {
+  for (const args of [
+    ["validate", "-"],
+    ["render", "-", "--format", "markdown"],
+    ["render", "-", "--format", "json"]
+  ]) {
+    const result = spawnSync("node", ["bin/agent-run-timeline.js", ...args], {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8",
+      input: JSON.stringify(duplicateIds)
+    });
+    assert.equal(result.status, 1, `${args.join(" ")} should reject duplicate ids`);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /events\[1\]\.id duplicates events\[0\]\.id: same/);
+    if (args.includes("markdown")) {
+      assert.match(result.stdout, /Validation: fail/);
+      assert.match(result.stdout, /60 minutes between same and same/);
+      assert.match(result.stdout, /same: review/);
+    }
+    if (args.includes("json")) {
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.gaps, [{ after: "same", before: "same", minutes: 60 }]);
+      assert.deepEqual(output.followups, [{ event: "same", task: "review" }]);
+    }
   }
 });
 

@@ -18,6 +18,7 @@ export function readRun(filePath) {
 export function validateRun(input) {
   const errors = [];
   const warnings = [];
+  const eventIds = new Map();
   if (!isPlainObject(input)) {
     errors.push("run must be a JSON object.");
     return { ok: false, errors, warnings };
@@ -46,6 +47,10 @@ export function validateRun(input) {
     if (event.phase && !PHASES.includes(event.phase)) errors.push(`event ${event.id || index + 1} uses unknown phase: ${event.phase}`);
     if (event.timestamp && Number.isNaN(Date.parse(event.timestamp))) errors.push(`event ${event.id || index + 1} has invalid timestamp.`);
     for (const finding of findSecretLikeValues(event)) warnings.push(`Secret-looking value at events[${index}]${finding.path.slice(1)}`);
+    if (isNonEmptyString(event.id)) {
+      if (eventIds.has(event.id)) errors.push(`events[${index}].id duplicates events[${eventIds.get(event.id)}].id: ${event.id}`);
+      else eventIds.set(event.id, index);
+    }
   }
   const ordered = input.events.filter(isPlainObject).filter((event) => event.timestamp).sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
   if (!ordered.some((event) => event.phase === "verification")) warnings.push("No verification phase event recorded.");
