@@ -31,6 +31,12 @@ import {
 const markdown = renderMarkdown(input);
 ```
 
+## Input contract
+
+`events` must be a non-empty array. Each event requires a non-empty string `id`, `timestamp`, `phase`, and `summary`. Event IDs must be unique within the run so gap and follow-up references identify exactly one event.
+
+Both `validate` and `render` exit nonzero for invalid input. A render still writes its Markdown or JSON diagnostic artifact, including validation findings, so it can be inspected or retained by automation.
+
 The package exports `readRun`, `validateRun`, `buildTimeline`, and
 `renderMarkdown` from its root entry point.
 
