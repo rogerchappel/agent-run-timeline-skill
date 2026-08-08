@@ -45,7 +45,7 @@ export function validateRun(input) {
       }
     }
     if (event.phase && !PHASES.includes(event.phase)) errors.push(`event ${event.id || index + 1} uses unknown phase: ${event.phase}`);
-    if (event.timestamp && Number.isNaN(Date.parse(event.timestamp))) errors.push(`event ${event.id || index + 1} has invalid timestamp.`);
+    if (event.timestamp && !isValidTimestamp(event.timestamp)) errors.push(`event ${event.id || index + 1} has invalid timestamp.`);
     for (const finding of findSecretLikeValues(event)) warnings.push(`Secret-looking value at events[${index}]${finding.path.slice(1)}`);
     if (isNonEmptyString(event.id)) {
       if (eventIds.has(event.id)) errors.push(`events[${index}].id duplicates events[${eventIds.get(event.id)}].id: ${event.id}`);
@@ -59,7 +59,10 @@ export function validateRun(input) {
 }
 
 export function buildTimeline(input, options = {}) {
-  const idleMinutes = Number(options.idleMinutes || 30);
+  const idleMinutes = Number(options.idleMinutes ?? 30);
+  if (!Number.isFinite(idleMinutes) || idleMinutes < 0) {
+    throw new RangeError("idleMinutes must be a non-negative finite number.");
+  }
   const validation = validateRun(input);
   const run = isPlainObject(input) ? input : {};
   const events = (Array.isArray(run.events) ? run.events : [])
@@ -147,4 +150,20 @@ function isNonEmptyString(value) {
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isValidTimestamp(value) {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day, hour, minute, second, fraction = ""] = match;
+  const milliseconds = Number(fraction.padEnd(3, "0"));
+  const parsed = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second), milliseconds));
+  return parsed.getUTCFullYear() === Number(year)
+    && parsed.getUTCMonth() === Number(month) - 1
+    && parsed.getUTCDate() === Number(day)
+    && parsed.getUTCHours() === Number(hour)
+    && parsed.getUTCMinutes() === Number(minute)
+    && parsed.getUTCSeconds() === Number(second)
+    && parsed.getUTCMilliseconds() === milliseconds;
 }
