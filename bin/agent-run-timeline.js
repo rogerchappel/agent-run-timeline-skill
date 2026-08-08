@@ -31,7 +31,12 @@ try {
 
 function readOption(args, name) {
   const index = args.indexOf(name);
-  return index === -1 ? undefined : args[index + 1];
+  if (index === -1) return undefined;
+  const value = args[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`Missing value for ${name}. Expected markdown or json.\n\nUsage: agent-run-timeline render <file|-> --format markdown|json`);
+  }
+  return value;
 }
 
 function printHelp() {

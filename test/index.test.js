@@ -205,6 +205,17 @@ test("CLI validate exits successfully for valid fixture", () => {
   assert.match(output, /"ok": true/);
 });
 
+test("CLI render rejects --format without a value", () => {
+  const result = spawnSync("node", ["bin/agent-run-timeline.js", "render", "fixtures/run.valid.json", "--format"], {
+    cwd: new URL("..", import.meta.url),
+    encoding: "utf8"
+  });
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /Missing value for --format\. Expected markdown or json\./);
+  assert.match(result.stderr, /Usage: agent-run-timeline render <file\|-> --format markdown\|json/);
+});
+
 test("stdin CLI commands reject unknown phases consistently", () => {
   const input = JSON.stringify({
     events: [{
