@@ -20,6 +20,21 @@ test("valid fixture passes validation", () => {
   assert.deepEqual(result.errors, []);
 });
 
+test("validation rejects impossible and non-UTC timestamps", () => {
+  for (const timestamp of ["2026-02-30T00:00:00Z", "2026-01-01T24:00:00Z", "2026-01-01T00:00:00+00:00"]) {
+    const input = { events: [{ id: "bad-time", timestamp, phase: "verification", summary: "Verify" }] };
+    assert.deepEqual(validateRun(input).errors, ["event bad-time has invalid timestamp."]);
+    assert.equal(buildTimeline(input).validation.ok, false);
+  }
+});
+
+test("validation accepts real UTC timestamps with optional milliseconds", () => {
+  for (const timestamp of ["2024-02-29T23:59:59Z", "2026-01-01T00:00:00.1Z", "2026-01-01T00:00:00.123Z"]) {
+    const input = { events: [{ id: "good-time", timestamp, phase: "verification", summary: "Verify" }] };
+    assert.equal(validateRun(input).ok, true);
+  }
+});
+
 test("invalid fixture reports actionable findings", () => {
   const result = validateRun(invalid);
   assert.equal(result.ok, false);
