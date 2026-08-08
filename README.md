@@ -31,6 +31,12 @@ import {
 const markdown = renderMarkdown(input);
 ```
 
+`buildTimeline(input, { idleMinutes })` and `renderMarkdown(input, { idleMinutes })`
+use an idle threshold of 30 minutes by default. A threshold of `0` is accepted
+and marks every adjacent pair as a gap. Other values must convert to a finite,
+non-negative number; invalid values throw a `RangeError` with a deterministic
+message.
+
 ## Input contract
 
 `events` must be a non-empty array. Each event requires a non-empty string `id`, `timestamp`, `phase`, and `summary`. Event IDs must be unique within the run so gap and follow-up references identify exactly one event.
@@ -46,7 +52,11 @@ Input must be a JSON object with a non-empty `events` array. Each event must be
 an object containing non-empty string `id`, `timestamp`, `phase`, and `summary`
 fields. `phase` must be one of `intake`, `planning`, `change`, `verification`,
 or `reporting`; unknown phases are validation errors so they cannot silently
-disappear from the grouped Markdown timeline. Optional `evidence` and
+disappear from the grouped Markdown timeline. Timestamps must identify a real
+UTC calendar instant in `YYYY-MM-DDTHH:mm:ssZ` form, optionally with one to
+three fractional-second digits (for example, `2026-07-22T00:00:00.123Z`).
+Calendar rollovers such as February 30, timezone offsets, and local timestamps
+are rejected. Optional `evidence` and
 `followups` fields must be arrays when present, and every array member must be
 a non-empty string. Findings identify malformed members by their event and
 zero-based array index (for example,
@@ -59,6 +69,9 @@ findings instead of throwing a `TypeError`. `buildTimeline` and
 `renderMarkdown` likewise return a safe artifact whose `validation` result
 describes malformed input. The CLI writes that artifact for `validate` and
 both `render` formats, then exits with status 1 when validation fails.
+`render` defaults to Markdown when `--format` is omitted. If `--format` is
+present it requires an explicit `markdown` or `json` value; a missing or
+unsupported value exits nonzero with an actionable error.
 
 ## Limitations
 

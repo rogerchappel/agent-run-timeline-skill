@@ -20,6 +20,21 @@ test("valid fixture passes validation", () => {
   assert.deepEqual(result.errors, []);
 });
 
+test("validation rejects impossible and non-UTC timestamps", () => {
+  for (const timestamp of ["2026-02-30T00:00:00Z", "2026-01-01T24:00:00Z", "2026-01-01T00:00:00+00:00"]) {
+    const input = { events: [{ id: "bad-time", timestamp, phase: "verification", summary: "Verify" }] };
+    assert.deepEqual(validateRun(input).errors, ["event bad-time has invalid timestamp."]);
+    assert.equal(buildTimeline(input).validation.ok, false);
+  }
+});
+
+test("validation accepts real UTC timestamps with optional milliseconds", () => {
+  for (const timestamp of ["2024-02-29T23:59:59Z", "2026-01-01T00:00:00.1Z", "2026-01-01T00:00:00.123Z"]) {
+    const input = { events: [{ id: "good-time", timestamp, phase: "verification", summary: "Verify" }] };
+    assert.equal(validateRun(input).ok, true);
+  }
+});
+
 test("invalid fixture reports actionable findings", () => {
   const result = validateRun(invalid);
   assert.equal(result.ok, false);
@@ -85,6 +100,25 @@ test("normalizer exposes validation and structured output", () => {
   const output = buildTimeline(valid);
   assert.equal(output.validation.ok, true);
   assert.ok(Object.keys(output).length > 2);
+});
+
+test("timeline honors an explicit zero idle threshold", () => {
+  const input = {
+    events: [
+      { id: "one", timestamp: "2026-01-01T00:00:00Z", phase: "change", summary: "First" },
+      { id: "two", timestamp: "2026-01-01T00:01:00Z", phase: "verification", summary: "Second" }
+    ]
+  };
+  assert.deepEqual(buildTimeline(input, { idleMinutes: 0 }).gaps, [{ after: "one", before: "two", minutes: 1 }]);
+});
+
+test("timeline rejects invalid idle thresholds deterministically", () => {
+  for (const idleMinutes of [-1, Number.NaN, Number.POSITIVE_INFINITY, "not-a-number"]) {
+    assert.throws(() => buildTimeline(valid, { idleMinutes }), {
+      name: "RangeError",
+      message: "idleMinutes must be a non-negative finite number."
+    });
+  }
 });
 
 test("duplicate non-empty event ids report deterministic indexed findings", () => {
@@ -169,6 +203,17 @@ test("CLI validate exits successfully for valid fixture", () => {
     encoding: "utf8"
   });
   assert.match(output, /"ok": true/);
+});
+
+test("CLI render rejects --format without a value", () => {
+  const result = spawnSync("node", ["bin/agent-run-timeline.js", "render", "fixtures/run.valid.json", "--format"], {
+    cwd: new URL("..", import.meta.url),
+    encoding: "utf8"
+  });
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.match(result.stderr, /Missing value for --format\. Expected markdown or json\./);
+  assert.match(result.stderr, /Usage: agent-run-timeline render <file\|-> --format markdown\|json/);
 });
 
 test("stdin CLI commands reject unknown phases consistently", () => {
