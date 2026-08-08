@@ -102,6 +102,25 @@ test("normalizer exposes validation and structured output", () => {
   assert.ok(Object.keys(output).length > 2);
 });
 
+test("timeline honors an explicit zero idle threshold", () => {
+  const input = {
+    events: [
+      { id: "one", timestamp: "2026-01-01T00:00:00Z", phase: "change", summary: "First" },
+      { id: "two", timestamp: "2026-01-01T00:01:00Z", phase: "verification", summary: "Second" }
+    ]
+  };
+  assert.deepEqual(buildTimeline(input, { idleMinutes: 0 }).gaps, [{ after: "one", before: "two", minutes: 1 }]);
+});
+
+test("timeline rejects invalid idle thresholds deterministically", () => {
+  for (const idleMinutes of [-1, Number.NaN, Number.POSITIVE_INFINITY, "not-a-number"]) {
+    assert.throws(() => buildTimeline(valid, { idleMinutes }), {
+      name: "RangeError",
+      message: "idleMinutes must be a non-negative finite number."
+    });
+  }
+});
+
 test("duplicate non-empty event ids report deterministic indexed findings", () => {
   const result = validateRun(duplicateIds);
   assert.equal(result.ok, false);

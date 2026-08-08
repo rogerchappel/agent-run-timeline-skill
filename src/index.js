@@ -59,7 +59,10 @@ export function validateRun(input) {
 }
 
 export function buildTimeline(input, options = {}) {
-  const idleMinutes = Number(options.idleMinutes || 30);
+  const idleMinutes = Number(options.idleMinutes ?? 30);
+  if (!Number.isFinite(idleMinutes) || idleMinutes < 0) {
+    throw new RangeError("idleMinutes must be a non-negative finite number.");
+  }
   const validation = validateRun(input);
   const run = isPlainObject(input) ? input : {};
   const events = (Array.isArray(run.events) ? run.events : [])
