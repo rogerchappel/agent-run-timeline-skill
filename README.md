@@ -71,7 +71,12 @@ describes malformed input. The CLI writes that artifact for `validate` and
 both `render` formats, then exits with status 1 when validation fails.
 `render` defaults to Markdown when `--format` is omitted. If `--format` is
 present it requires an explicit `markdown` or `json` value; a missing or
-unsupported value exits nonzero with an actionable error.
+unsupported value exits nonzero with an actionable error. CLI arguments are
+strict: `validate` accepts no options or trailing positional arguments, and
+`render` accepts at most one `--format` option and no trailing positional
+arguments. Unknown or misspelled options, duplicate `--format` options, and
+options used with the wrong command write a deterministic error to stderr and
+exit nonzero. The same contract applies when `-` selects stdin.
 
 ## Limitations
 

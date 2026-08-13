@@ -216,6 +216,44 @@ test("CLI render rejects --format without a value", () => {
   assert.match(result.stderr, /Usage: agent-run-timeline render <file\|-> --format markdown\|json/);
 });
 
+test("CLI rejects arguments outside each command contract", () => {
+  const cases = [
+    [["render", "fixtures/run.valid.json", "--formt", "json"], "Unknown option: --formt."],
+    [["render", "fixtures/run.valid.json", "unexpected"], "Unexpected argument: unexpected."],
+    [["render", "fixtures/run.valid.json", "--format", "json", "--format", "markdown"], "Option --format may only be specified once."],
+    [["render", "fixtures/run.valid.json", "--format", "yaml"], "Unsupported format: yaml."],
+    [["validate", "fixtures/run.valid.json", "unexpected"], "Unexpected argument: unexpected."],
+    [["validate", "fixtures/run.valid.json", "--format", "json"], "Option --format is not valid for validate."],
+    [["validate", "fixtures/run.valid.json", "--unknown"], "Unknown option: --unknown."]
+  ];
+
+  for (const [args, message] of cases) {
+    const result = spawnSync("node", ["bin/agent-run-timeline.js", ...args], {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8"
+    });
+    assert.equal(result.status, 1, `${args.join(" ")} should fail`);
+    assert.equal(result.stdout, "");
+    assert.equal(result.stderr, `${message}\n`);
+  }
+});
+
+test("strict CLI parsing preserves documented render defaults and stdin", () => {
+  const input = JSON.stringify(valid);
+  const markdown = execFileSync("node", ["bin/agent-run-timeline.js", "render", "-"], {
+    cwd: new URL("..", import.meta.url),
+    encoding: "utf8",
+    input
+  });
+  const json = execFileSync("node", ["bin/agent-run-timeline.js", "render", "-", "--format", "json"], {
+    cwd: new URL("..", import.meta.url),
+    encoding: "utf8",
+    input
+  });
+  assert.match(markdown, /Validation: pass/);
+  assert.equal(JSON.parse(json).validation.ok, true);
+});
+
 test("stdin CLI commands reject unknown phases consistently", () => {
   const input = JSON.stringify({
     events: [{
