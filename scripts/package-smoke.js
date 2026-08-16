@@ -21,18 +21,17 @@ try {
     stdio: "inherit"
   });
 
-  writeFileSync(consumer, [
-    'import { renderMarkdown } from "agent-run-timeline-skill";',
-    'const input = { events: [{ id: "1", timestamp: "2026-01-01T00:00:00Z", phase: "verification", summary: "Passed" }] };',
-    "const markdown = renderMarkdown(input);",
-    'if (!markdown.includes("Validation: pass")) process.exitCode = 1;',
-    ""
-  ].join("\n"));
+  const installedRoot = join(temporaryRoot, "node_modules/agent-run-timeline-skill");
+  const readme = readFileSync(join(installedRoot, "README.md"), "utf8");
+  const libraryExample = readme.match(/## Library API\s+```js\n([\s\S]*?)\n```/);
+  assert.ok(libraryExample, "README Library API JavaScript example is missing");
+
+  writeFileSync(consumer, `${libraryExample[1]}\nassertMarkdown(markdown);\nfunction assertMarkdown(value) {\n  if (!value.includes("Validation: pass")) throw new Error("Library API example did not render a valid timeline");\n}\n`);
   execFileSync("node", [consumer], { cwd: temporaryRoot, stdio: "inherit" });
 
-  const manifest = JSON.parse(readFileSync(join(temporaryRoot, "node_modules/agent-run-timeline-skill/package.json"), "utf8"));
+  const manifest = JSON.parse(readFileSync(join(installedRoot, "package.json"), "utf8"));
   assert.equal(manifest.exports["."], "./src/index.js");
-  console.log("Packed package supports the documented library import.");
+  console.log("Packed package executes the README Library API example.");
 } finally {
   rmSync(temporaryRoot, { recursive: true, force: true });
 }
