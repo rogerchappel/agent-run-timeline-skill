@@ -28,6 +28,17 @@ import {
   validateRun,
 } from "agent-run-timeline-skill";
 
+const input = {
+  title: "Release verification",
+  events: [
+    {
+      id: "verify-1",
+      timestamp: "2026-01-01T00:00:00Z",
+      phase: "verification",
+      summary: "Package checks passed",
+    },
+  ],
+};
 const markdown = renderMarkdown(input);
 ```
 
