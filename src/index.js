@@ -23,6 +23,9 @@ export function validateRun(input) {
     errors.push("run must be a JSON object.");
     return { ok: false, errors, warnings };
   }
+  for (const finding of findSecretLikeValues(input.title)) {
+    warnings.push(`Secret-looking value at title${finding.path.slice(1)}`);
+  }
   if (!Array.isArray(input.events) || input.events.length === 0) {
     errors.push("events must contain at least one run event.");
     return { ok: false, errors, warnings };
