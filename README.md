@@ -89,10 +89,17 @@ arguments. Unknown or misspelled options, duplicate `--format` options, and
 options used with the wrong command write a deterministic error to stderr and
 exit nonzero. The same contract applies when `-` selects stdin.
 
+Secret-like values in the root `title` and in event fields produce warnings
+that identify only the field location (for example,
+`Secret-looking value at title` or
+`Secret-looking value at events[0].summary`). The values themselves are
+replaced with `[REDACTED]` in Markdown and JSON render output. Warnings do not
+make an otherwise valid run fail validation.
+
 ## Limitations
 
 This package is local-first. It does not fetch private chat logs, call connectors, store credentials, or approve writes. Treat output as a review aid, not as proof that an external system changed.
 
 ## Safety notes
 
-Secret-looking values are replaced with `[REDACTED]` in every render format. Validation warnings identify the affected fields without repeating their values. Run against redacted fixtures when possible and review validation warnings before sharing reports outside the project context.
+Secret-looking values are replaced with `[REDACTED]` in every render format. Validation warnings identify affected root-title and event-field locations without repeating their values. Run against redacted fixtures when possible and review validation warnings before sharing reports outside the project context.
