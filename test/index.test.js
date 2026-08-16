@@ -180,6 +180,26 @@ test("render formats redact secret-like values while retaining validation warnin
   assert.match(markdown, /Secret-looking value at events\[0\]\.summary/);
 });
 
+test("run titles are redacted and reported without exposing the value", () => {
+  const secret = "token=supersecretvalue123";
+  const input = {
+    title: `Timeline for ${secret}`,
+    events: [
+      { id: "title-secret", timestamp: "2026-07-22T00:00:00Z", phase: "verification", summary: "Verified title handling" },
+      { id: "title-report", timestamp: "2026-07-22T00:01:00Z", phase: "reporting", summary: "Reported result" }
+    ]
+  };
+
+  const validation = validateRun(input);
+  assert.deepEqual(validation.warnings, ["Secret-looking value at title"]);
+
+  for (const output of [renderMarkdown(input), JSON.stringify(buildTimeline(input))]) {
+    assert.doesNotMatch(output, new RegExp(secret));
+    assert.match(output, /REDACTED/);
+    assert.match(output, /Secret-looking value at title/);
+  }
+});
+
 test("CLI render redacts secret-like values in markdown and JSON", () => {
   const secret = "token=supersecretvalue123";
   const input = JSON.stringify({
@@ -194,6 +214,28 @@ test("CLI render redacts secret-like values in markdown and JSON", () => {
     });
     assert.doesNotMatch(output, new RegExp(secret));
     assert.match(output, /REDACTED/);
+  }
+});
+
+test("CLI render reports a redacted secret-like run title in both formats", () => {
+  const secret = "token=supersecretvalue123";
+  const input = JSON.stringify({
+    title: `Timeline for ${secret}`,
+    events: [
+      { id: "title-secret", timestamp: "2026-07-22T00:00:00Z", phase: "verification", summary: "Verified" },
+      { id: "title-report", timestamp: "2026-07-22T00:01:00Z", phase: "reporting", summary: "Reported" }
+    ]
+  });
+
+  for (const format of ["markdown", "json"]) {
+    const output = execFileSync("node", ["bin/agent-run-timeline.js", "render", "-", "--format", format], {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8",
+      input
+    });
+    assert.doesNotMatch(output, new RegExp(secret));
+    assert.match(output, /REDACTED/);
+    assert.match(output, /Secret-looking value at title/);
   }
 });
 
