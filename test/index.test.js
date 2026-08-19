@@ -258,6 +258,36 @@ test("CLI render rejects --format without a value", () => {
   assert.match(result.stderr, /Usage: agent-run-timeline render <file\|-> --format markdown\|json/);
 });
 
+test("CLI help is the only incomplete invocation that succeeds", () => {
+  for (const option of ["-h", "--help"]) {
+    const result = spawnSync("node", ["bin/agent-run-timeline.js", option], {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8"
+    });
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Usage:/);
+    assert.equal(result.stderr, "");
+  }
+
+  const cases = [
+    [[], "Missing command."],
+    [["validate"], "Missing file for validate. Expected <file|->."],
+    [["render"], "Missing file for render. Expected <file|->."],
+    [["nonsense"], "Unknown command: nonsense"]
+  ];
+
+  for (const [args, message] of cases) {
+    const result = spawnSync("node", ["bin/agent-run-timeline.js", ...args], {
+      cwd: new URL("..", import.meta.url),
+      encoding: "utf8"
+    });
+    assert.equal(result.status, 1, `${args.join(" ") || "no arguments"} should fail`);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, new RegExp(message.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(result.stderr, /Usage:/);
+  }
+});
+
 test("CLI rejects arguments outside each command contract", () => {
   const cases = [
     [["render", "fixtures/run.valid.json", "--formt", "json"], "Unknown option: --formt."],
