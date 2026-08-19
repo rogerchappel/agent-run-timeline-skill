@@ -87,7 +87,10 @@ strict: `validate` accepts no options or trailing positional arguments, and
 `render` accepts at most one `--format` option and no trailing positional
 arguments. Unknown or misspelled options, duplicate `--format` options, and
 options used with the wrong command write a deterministic error to stderr and
-exit nonzero. The same contract applies when `-` selects stdin.
+exit nonzero. Only explicit `-h` and `--help` requests print usage to stdout
+and exit successfully. No arguments, unknown commands, and commands missing
+their required `<file|->` operand print an actionable error plus usage to
+stderr and exit nonzero. The same contract applies when `-` selects stdin.
 
 Secret-like values in the root `title` and in event fields produce warnings
 that identify only the field location (for example,
