@@ -3,15 +3,24 @@ import { buildTimeline, readRun, renderMarkdown, validateRun } from "../src/inde
 
 const [command, filePath, ...args] = process.argv.slice(2);
 
-if (!command || !filePath || ["-h", "--help"].includes(command)) {
+if (["-h", "--help"].includes(command)) {
   printHelp();
-  process.exit(command ? 0 : 1);
+  process.exit(0);
+}
+
+if (!command) {
+  failWithHelp("Missing command.");
+}
+
+if (!["validate", "render"].includes(command)) {
+  failWithHelp(`Unknown command: ${command}`);
+}
+
+if (!filePath) {
+  failWithHelp(`Missing file for ${command}. Expected <file|->.`);
 }
 
 try {
-  if (!["validate", "render"].includes(command)) {
-    throw new Error(`Unknown command: ${command}`);
-  }
   const options = parseArguments(command, args);
   const input = readRun(filePath);
   if (command === "validate") {
@@ -69,4 +78,9 @@ function parseArguments(command, args) {
 
 function printHelp() {
   process.stdout.write(`agent-run-timeline\n\nUsage:\n  agent-run-timeline validate <file|->\n  agent-run-timeline render <file|-> --format markdown|json\n`);
+}
+
+function failWithHelp(message) {
+  process.stderr.write(`${message}\n\nUsage:\n  agent-run-timeline validate <file|->\n  agent-run-timeline render <file|-> --format markdown|json\n`);
+  process.exit(1);
 }
