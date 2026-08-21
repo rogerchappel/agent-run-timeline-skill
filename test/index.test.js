@@ -112,6 +112,31 @@ test("timeline honors an explicit zero idle threshold", () => {
   assert.deepEqual(buildTimeline(input, { idleMinutes: 0 }).gaps, [{ after: "one", before: "two", minutes: 1 }]);
 });
 
+test("timeline compares exact elapsed time at the idle threshold", () => {
+  const event = (id, timestamp) => ({ id, timestamp, phase: "verification", summary: id });
+
+  assert.deepEqual(buildTimeline({ events: [
+    event("start", "2026-01-01T00:00:00.000Z"),
+    event("below", "2026-01-01T00:29:59.999Z")
+  ] }).gaps, []);
+
+  assert.deepEqual(buildTimeline({ events: [
+    event("start", "2026-01-01T00:00:00.000Z"),
+    event("exact", "2026-01-01T00:30:00.000Z")
+  ] }).gaps, [{ after: "start", before: "exact", minutes: 30 }]);
+});
+
+test("timeline rounds only the displayed gap minutes", () => {
+  const input = {
+    events: [
+      { id: "start", timestamp: "2026-01-01T00:00:00.000Z", phase: "change", summary: "Start" },
+      { id: "end", timestamp: "2026-01-01T00:30:30.001Z", phase: "verification", summary: "End" }
+    ]
+  };
+
+  assert.deepEqual(buildTimeline(input).gaps, [{ after: "start", before: "end", minutes: 31 }]);
+});
+
 test("timeline rejects invalid idle thresholds deterministically", () => {
   for (const idleMinutes of [-1, Number.NaN, Number.POSITIVE_INFINITY, "not-a-number"]) {
     assert.throws(() => buildTimeline(valid, { idleMinutes }), {
