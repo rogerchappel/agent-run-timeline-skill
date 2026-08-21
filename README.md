@@ -46,7 +46,10 @@ const markdown = renderMarkdown(input);
 use an idle threshold of 30 minutes by default. A threshold of `0` is accepted
 and marks every adjacent pair as a gap. Other values must convert to a finite,
 non-negative number; invalid values throw a `RangeError` with a deterministic
-message.
+message. Gap qualification compares the exact elapsed duration with the
+threshold, so `29:59.999` is below a 30-minute threshold and `30:00.000`
+qualifies. A qualifying gap's stored and rendered `minutes` value is rounded
+to the nearest whole minute for display only.
 
 ## Input contract
 

@@ -76,8 +76,10 @@ export function buildTimeline(input, options = {}) {
     const previous = Date.parse(events[index - 1].timestamp);
     const current = Date.parse(events[index].timestamp);
     if (!Number.isNaN(previous) && !Number.isNaN(current)) {
-      const minutes = Math.round((current - previous) / 60000);
-      if (minutes >= idleMinutes) gaps.push({ after: events[index - 1].id, before: events[index].id, minutes });
+      const elapsedMilliseconds = current - previous;
+      if (elapsedMilliseconds >= idleMinutes * 60000) {
+        gaps.push({ after: events[index - 1].id, before: events[index].id, minutes: Math.round(elapsedMilliseconds / 60000) });
+      }
     }
   }
   const safeEvents = redactSecretLikeValues(events);
