@@ -94,25 +94,25 @@ export function buildTimeline(input, options = {}) {
 
 export function renderMarkdown(input, options = {}) {
   const timeline = buildTimeline(input, options);
-  const lines = [`# Agent Run Timeline: ${timeline.title}`, "", `- Validation: ${timeline.validation.ok ? "pass" : "fail"}`, `- Events: ${timeline.events.length}`, `- Gaps: ${timeline.gaps.length}`, ""];
+  const lines = [`# Agent Run Timeline: ${escapeMarkdownInline(timeline.title)}`, "", `- Validation: ${timeline.validation.ok ? "pass" : "fail"}`, `- Events: ${timeline.events.length}`, `- Gaps: ${timeline.gaps.length}`, ""];
   for (const phase of PHASES) {
     lines.push(`## ${capitalize(phase)}`, "");
     const events = timeline.phases[phase] || [];
     if (events.length === 0) lines.push("- none recorded");
     for (const event of events) {
-      lines.push(`- ${event.timestamp || "unknown time"} [${event.id || "missing id"}] ${event.summary || "missing summary"}`);
-      for (const ref of Array.isArray(event.evidence) ? event.evidence.filter(isNonEmptyString) : []) lines.push(`  - evidence: ${ref}`);
+      lines.push(`- ${event.timestamp || "unknown time"} [${escapeMarkdownInline(event.id || "missing id")}] ${escapeMarkdownInline(event.summary || "missing summary")}`);
+      for (const ref of Array.isArray(event.evidence) ? event.evidence.filter(isNonEmptyString) : []) lines.push(`  - evidence: ${escapeMarkdownInline(ref)}`);
     }
     lines.push("");
   }
   if (timeline.gaps.length) {
     lines.push("## Idle Gaps", "");
-    for (const gap of timeline.gaps) lines.push(`- ${gap.minutes} minutes between ${gap.after} and ${gap.before}`);
+    for (const gap of timeline.gaps) lines.push(`- ${gap.minutes} minutes between ${escapeMarkdownInline(gap.after)} and ${escapeMarkdownInline(gap.before)}`);
     lines.push("");
   }
   if (timeline.followups.length) {
     lines.push("## Follow-ups", "");
-    for (const item of timeline.followups) lines.push(`- ${item.event}: ${item.task}`);
+    for (const item of timeline.followups) lines.push(`- ${escapeMarkdownInline(item.event)}: ${escapeMarkdownInline(item.task)}`);
     lines.push("");
   }
   appendFindings(lines, timeline.validation);
@@ -147,6 +147,17 @@ function redactSecretLikeValues(value) {
 
 function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function escapeMarkdownInline(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\\/g, "\\\\")
+    .replace(/([`*_[\]{}()#+.!|~-])/g, "\\$1")
+    .replace(/\r\n?|\n/g, " <br> ")
+    .replace(/\\\[REDACTED\\\]/g, "[REDACTED]");
 }
 
 function isNonEmptyString(value) {
