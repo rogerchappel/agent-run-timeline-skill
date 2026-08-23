@@ -96,6 +96,55 @@ test("markdown render includes timeline sections", () => {
   assert.match(rendered, /Validation: pass/);
 });
 
+test("markdown render keeps multiline fields inside their timeline items", () => {
+  const input = {
+    title: "Run #1\n## forged title",
+    events: [
+      {
+        id: "change\n- forged id",
+        timestamp: "2026-07-22T00:00:00Z",
+        phase: "change",
+        summary: "Checked *output*\n## forged heading",
+        evidence: ["log.md\n- forged evidence"],
+        followups: ["Review [report](https://example.test)\n1. forged task"]
+      },
+      { id: "report", timestamp: "2026-07-22T00:01:00Z", phase: "reporting", summary: "Reported" },
+      { id: "verify", timestamp: "2026-07-22T00:02:00Z", phase: "verification", summary: "Verified" }
+    ]
+  };
+
+  assert.equal(validateRun(input).ok, true);
+  const rendered = renderMarkdown(input);
+  assert.match(rendered, /Run \\#1 <br> \\#\\# forged title/);
+  assert.match(rendered, /Checked \\\*output\\\* <br> \\#\\# forged heading/);
+  assert.match(rendered, /evidence: log\\\.md <br> \\- forged evidence/);
+  assert.ok(rendered.includes("Review \\[report\\]\\(https://example\\.test\\) <br> 1\\. forged task"));
+  assert.equal(rendered.split("\n").filter((line) => line.startsWith("## forged")).length, 0);
+  assert.equal(rendered.split("\n").filter((line) => /^- forged/.test(line)).length, 0);
+});
+
+test("CLI keeps Markdown markers and newlines structural only in Markdown output", () => {
+  const input = {
+    title: "Run\n# injected",
+    events: [
+      { id: "verify\n- injected", timestamp: "2026-07-22T00:00:00Z", phase: "verification", summary: "Check\n## injected", evidence: ["ok\n- injected"] },
+      { id: "report", timestamp: "2026-07-22T00:01:00Z", phase: "reporting", summary: "Report", followups: ["next\n1. injected"] }
+    ]
+  };
+  const markdown = execFileSync("node", ["bin/agent-run-timeline.js", "render", "-", "--format", "markdown"], {
+    cwd: new URL("..", import.meta.url), encoding: "utf8", input: JSON.stringify(input)
+  });
+  const json = JSON.parse(execFileSync("node", ["bin/agent-run-timeline.js", "render", "-", "--format", "json"], {
+    cwd: new URL("..", import.meta.url), encoding: "utf8", input: JSON.stringify(input)
+  }));
+
+  assert.match(markdown, /Check <br> \\#\\# injected/);
+  assert.doesNotMatch(markdown, /^## injected$/m);
+  assert.equal(json.title, input.title);
+  assert.equal(json.events[0].summary, input.events[0].summary);
+  assert.equal(json.followups[0].task, input.events[1].followups[0]);
+});
+
 test("normalizer exposes validation and structured output", () => {
   const output = buildTimeline(valid);
   assert.equal(output.validation.ok, true);

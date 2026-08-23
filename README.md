@@ -77,6 +77,14 @@ zero-based array index (for example,
 `event 1 evidence[0] must be a non-empty string.`). Rendered follow-ups and
 evidence omit invalid members instead of coercing them into misleading text.
 
+`title`, event `id` and `summary`, and each `evidence` and `followups` member
+may contain multiple lines and Markdown punctuation. Markdown rendering keeps
+line breaks as inline `<br>` elements and backslash-escapes Markdown syntax
+(while encoding HTML angle brackets), so field content cannot introduce new
+headings, list items, links, or HTML structure. The JSON renderer does not
+apply Markdown escaping or newline normalization: apart from secret-value
+redaction, it preserves these strings exactly for structured consumers.
+
 `validateRun` accepts any JSON value and returns
 `{ ok, errors, warnings }`; malformed input is reported through deterministic
 findings instead of throwing a `TypeError`. `buildTimeline` and
