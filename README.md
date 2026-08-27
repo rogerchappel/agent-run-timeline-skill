@@ -76,6 +76,9 @@ a non-empty string. Findings identify malformed members by their event and
 zero-based array index (for example,
 `event 1 evidence[0] must be a non-empty string.`). Rendered follow-ups and
 evidence omit invalid members instead of coercing them into misleading text.
+Field-derived text repeated in the Markdown validation findings is escaped by
+the same rules, while JSON and `validateRun` keep the original readable finding
+strings for structured consumers.
 
 `title`, event `id` and `summary`, and each `evidence` and `followups` member
 may contain multiple lines and Markdown punctuation. Markdown rendering keeps
