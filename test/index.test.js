@@ -206,6 +206,28 @@ test("duplicate non-empty event ids report deterministic indexed findings", () =
   assert.equal(output.validation.ok, false);
 });
 
+test("markdown renders field-derived validation findings as inert inline text", () => {
+  const id = "same\n## forged heading\n- forged list\n[link](https://example.test)\n<div>html</div>";
+  const input = {
+    events: [
+      { id, timestamp: "invalid", phase: "unknown\n## phase heading", summary: "First" },
+      { id, timestamp: "2026-07-22T00:01:00Z", phase: "change", summary: "Second" }
+    ]
+  };
+
+  const validation = validateRun(input);
+  assert.equal(validation.ok, false);
+  assert.ok(validation.errors.some((finding) => finding.includes(id)));
+
+  const rendered = renderMarkdown(input);
+  assert.match(rendered, /same <br> \\#\\# forged heading <br> \\- forged list/);
+  assert.ok(rendered.includes("\\[link\\]\\(https://example\\.test\\)"));
+  assert.ok(rendered.includes("&lt;div&gt;html&lt;/div&gt;"));
+  assert.equal(rendered.split("\n").filter((line) => /^## forged heading$/.test(line)).length, 0);
+  assert.equal(rendered.split("\n").filter((line) => /^- forged list$/.test(line)).length, 0);
+  assert.equal(rendered.includes("<div>html</div>"), false);
+});
+
 test("unknown phases are validation errors in library artifacts", () => {
   const input = {
     events: [{
