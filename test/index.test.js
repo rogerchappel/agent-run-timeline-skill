@@ -249,7 +249,7 @@ test("unknown phases are validation errors in library artifacts", () => {
 
   const markdown = renderMarkdown(input);
   assert.match(markdown, /Validation: fail/);
-  assert.match(markdown, new RegExp(finding));
+  assert.match(markdown.replace(/\\/g, ""), new RegExp(finding));
 });
 
 test("render formats redact secret-like values while retaining validation warnings", () => {
@@ -273,7 +273,7 @@ test("render formats redact secret-like values while retaining validation warnin
   }
   assert.match(markdown, /\[REDACTED\]/);
   assert.match(json, /\[REDACTED\]/);
-  assert.match(markdown, /Secret-looking value at events\[0\]\.summary/);
+  assert.match(markdown.replace(/\\/g, ""), /Secret-looking value at events\[0\]\.summary/);
 });
 
 test("run titles are redacted and reported without exposing the value", () => {
@@ -289,7 +289,7 @@ test("run titles are redacted and reported without exposing the value", () => {
   const validation = validateRun(input);
   assert.deepEqual(validation.warnings, ["Secret-looking value at title"]);
 
-  for (const output of [renderMarkdown(input), JSON.stringify(buildTimeline(input))]) {
+  for (const output of [renderMarkdown(input).replace(/\\/g, ""), JSON.stringify(buildTimeline(input))]) {
     assert.doesNotMatch(output, new RegExp(secret));
     assert.match(output, /REDACTED/);
     assert.match(output, /Secret-looking value at title/);
@@ -331,7 +331,7 @@ test("CLI render reports a redacted secret-like run title in both formats", () =
     });
     assert.doesNotMatch(output, new RegExp(secret));
     assert.match(output, /REDACTED/);
-    assert.match(output, /Secret-looking value at title/);
+    assert.match(format === "markdown" ? output.replace(/\\/g, "") : output, /Secret-looking value at title/);
   }
 });
 
@@ -444,7 +444,8 @@ test("stdin CLI commands reject unknown phases consistently", () => {
     });
     assert.equal(result.status, 1, `${args.join(" ")} should reject an unknown phase`);
     assert.equal(result.stderr, "");
-    assert.match(result.stdout, /event custom-phase uses unknown phase: analysis/);
+    const comparable = args.includes("markdown") ? result.stdout.replace(/\\/g, "") : result.stdout;
+    assert.match(comparable, /event custom-phase uses unknown phase: analysis/);
   }
 });
 
@@ -461,7 +462,8 @@ test("stdin CLI commands reject duplicate ids while retaining render diagnostics
     });
     assert.equal(result.status, 1, `${args.join(" ")} should reject duplicate ids`);
     assert.equal(result.stderr, "");
-    assert.match(result.stdout, /events\[1\]\.id duplicates events\[0\]\.id: same/);
+    const comparable = args.includes("markdown") ? result.stdout.replace(/\\/g, "") : result.stdout;
+    assert.match(comparable, /events\[1\]\.id duplicates events\[0\]\.id: same/);
     if (args.includes("markdown")) {
       assert.match(result.stdout, /Validation: fail/);
       assert.match(result.stdout, /60 minutes between same and same/);
@@ -498,7 +500,8 @@ test("stdin CLI commands fail consistently with actionable findings for invalid 
       });
       assert.equal(result.status, 1, `${args.join(" ")} should reject ${JSON.stringify(input)}`);
       assert.equal(result.stderr, "");
-      assert.match(result.stdout, new RegExp(finding.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      const comparable = args.includes("markdown") ? result.stdout.replace(/\\/g, "") : result.stdout;
+      assert.match(comparable, new RegExp(finding.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
       assert.doesNotMatch(result.stdout, /TypeError|Cannot read properties/);
     }
   }
@@ -528,9 +531,10 @@ test("stdin CLI commands reject malformed collection members without unsafe coer
     });
     assert.equal(result.status, 1, `${args.join(" ")} should reject malformed members`);
     assert.equal(result.stderr, "");
-    assert.match(result.stdout, /event 1 evidence\[0\] must be a non-empty string\./);
-    assert.match(result.stdout, /event 1 followups\[0\] must be a non-empty string\./);
-    assert.match(result.stdout, /event 1 followups\[1\] must be a non-empty string\./);
+    const comparable = args.includes("markdown") ? result.stdout.replace(/\\/g, "") : result.stdout;
+    assert.match(comparable, /event 1 evidence\[0\] must be a non-empty string\./);
+    assert.match(comparable, /event 1 followups\[0\] must be a non-empty string\./);
+    assert.match(comparable, /event 1 followups\[1\] must be a non-empty string\./);
     assert.doesNotMatch(result.stdout, /\[object Object\]|TypeError|Cannot read properties/);
   }
 });
