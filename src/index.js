@@ -122,8 +122,8 @@ export function renderMarkdown(input, options = {}) {
 function appendFindings(lines, validation) {
   if (!validation.errors.length && !validation.warnings.length) return;
   lines.push("## Validation Findings", "");
-  for (const error of validation.errors) lines.push(`- error: ${error}`);
-  for (const warning of validation.warnings) lines.push(`- warning: ${warning}`);
+  for (const error of validation.errors) lines.push(`- error: ${escapeMarkdownInline(error)}`);
+  for (const warning of validation.warnings) lines.push(`- warning: ${escapeMarkdownInline(warning)}`);
 }
 
 function findSecretLikeValues(value, path = "$") {
