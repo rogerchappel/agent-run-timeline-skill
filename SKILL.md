@@ -6,7 +6,7 @@ Use this skill when an agent needs a local, reviewable timeline artifact before 
 
 ## Required tools or inputs
 
-- Node.js 18 or newer
+- Node.js 22 or newer
 - A redacted JSON input matching the fixtures in `fixtures/`
 - Local shell access for `npm test`, `npm run check`, and `npm run smoke`
 
