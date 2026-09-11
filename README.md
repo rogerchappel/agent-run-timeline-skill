@@ -2,6 +2,15 @@
 
 Local-first skill for converting agent run events into audit timelines with gap detection.
 
+## Runtime support
+
+This package is verified in CI against Node.js 22 and 24, the in-support
+release lines at the time of writing. `package.json` `engines.node` declares
+the supported floor (`>=22`) and `SKILL.md` repeats the same requirement, so
+documented support and CI-verified support stay aligned. Other runtime
+versions, including end-of-life lines such as Node.js 18 and 20, are not
+tested by CI.
+
 ## Quickstart
 
 ```bash
