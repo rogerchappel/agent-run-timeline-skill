@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22, 24]
+        node-version: [18, 22, 24]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -21,3 +21,37 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm install --package-lock=false
       - run: npm run validate
+
+  # Verify Node.js engine requirement
+  engine-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: |
+          if [ "$(node -v)" != "$(node -e "console.log(require('./package.json').engines.node)")" ]; then
+            echo "Node.js version mismatch"
+            exit 1
+          fi
+        env:
+          NODE_VERSION: ${{ matrix.node-version }}
+    strategy:
+      matrix:
+        node-version: [18]
+
+  # Verify that the package can be installed and run
+  package-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install --package-lock=false
+      - run: npm run smoke
+      - run: npm run smoke:package
+    strategy:
+      matrix:
+        node-version: [18, 22, 24]
