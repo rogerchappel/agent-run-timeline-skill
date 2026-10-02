@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 22, 24]
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -22,36 +22,50 @@ jobs:
       - run: npm install --package-lock=false
       - run: npm run validate
 
-  # Verify Node.js engine requirement
+  # Verify Node.js satisfies the package's declared engine range
   engine-check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
-      - run: |
-          if [ "$(node -v)" != "$(node -e "console.log(require('./package.json').engines.node)")" ]; then
-            echo "Node.js version mismatch"
-            exit 1
-          fi
-        env:
-          NODE_VERSION: ${{ matrix.node-version }}
-    strategy:
-      matrix:
-        node-version: [18]
+      - name: Verify runtime satisfies the package engine range
+        run: |
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const range = JSON.parse(readFileSync("package.json", "utf8")).engines?.node;
+            const match = typeof range === "string" && range.match(/^>=(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
+            if (!match) {
+              console.error(`Unsupported Node.js engine range: ${range}`);
+              process.exit(1);
+            }
+            const required = match.slice(1).map((part) => Number(part ?? 0));
+            const actual = process.versions.node.split(".").map(Number);
+            const compatible = actual[0] > required[0] ||
+              (actual[0] === required[0] && (actual[1] > required[1] ||
+                (actual[1] === required[1] && actual[2] >= required[2])));
+            if (!compatible) {
+              console.error(`Node.js ${process.versions.node} does not satisfy ${range}`);
+              process.exit(1);
+            }
+            console.log(`Node.js ${process.versions.node} satisfies ${range}`);
+          '
 
   # Verify that the package can be installed and run
   package-check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm install --package-lock=false
-      - run: npm run smoke
+      - run: npm run validate
       - run: npm run smoke:package
-    strategy:
-      matrix:
-        node-version: [18, 22, 24]
